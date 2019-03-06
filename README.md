@@ -1,2 +1,2 @@
 # sentiment-analysis
-Looking at public comments to determin if technical problems exist.
+Looking at public comments to determine if technical problems exist.
