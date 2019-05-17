@@ -1,30 +1,76 @@
+from IPython import display
+import math
+from pprint import pprint
+import pandas as pd
+import numpy as np
+import nltk
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set(style='darkgrid', context='talk', palette='Dark2')
+import pandas as pd
+
+import nltk
 import praw
 reddit=praw.Reddit(client_id='Obe8sGLlN4NcKQ',
                   client_secret='VlXJk0avVaEuqmYdWEjPXFb4wEU',
                   password='vWGVb9sWZZRo6cVk',
                   user_agent='testscript by /u/Smashdawg',
                   username='Smashdawg')
-
+                 
 subreddit=reddit.subreddit('twitch')
 
-#subreddit_flair=flair_name:"Tech Support"
+top_python=subreddit.top('day')
 
-hot_python=subreddit.hot(limit=10)
+#create dataframe
+df_rows=[[submission.id,submission.title,submission.author,submission.ups,submission.downs,submission.url]for submission in top_python]
+df=pd.DataFrame(df_rows,columns=['SubmissionID','Title','Author','UpVotes','DownVotes','URL'])
 
-for submission in hot_python:
-    if not submission.stickied:
-        print('Title: {}, ups: {}, Have we visited: {}'.format(submission.title,
-                                                              submission.ups,
-                                                              submission.downs,
-                                                              submission.visited))
-                                                              
-comments=submission.comments.list()
-for comment in comments:
-    print(20*'-')
-    print('Parent ID:',comment.parent())
-    print('Comment ID:', comment.id)
-    print(comment.body)
-    if len(comment.replies)<0:
-        for reply in comment.replies:
-            print('REPLY',reply.body)   
-           
+df.head()
+
+#code that creates a list of strings
+#debug statement
+print(len(df),'submissions to process')
+
+#subComments will be a string of all the comments for a particular SUBmission
+#create a list to hold a list of subComments for each ID
+allComments = []
+
+#for each row in the df
+for i, row in df.iterrows():
+    
+    #print a period so we know the process is running
+    print('.', end='')
+    
+    #grab ID of that df row
+    subID = df.iloc[i]['SubmissionID']
+    #print('setting submission id to',subID)
+    
+    #set the submissionID for praw
+    submission = reddit.submission(subID)
+    submission.comments.replace_more(limit=None)
+    
+    #init and clear a new subComments string for appending
+    subComments = ""
+    
+    #for each comment in submission, append into subComments
+    #each comment is separated with a single line break PLUS exactly twenty(20) hyphens
+    for comment in submission.comments.list():
+        subComments = subComments + comment.body + "\n\n" + "------------------------------" + "\n\n"
+        
+    #output number of comments that was pulled
+    #print('pulled',len(subComments),'comments for id:',subID)
+    
+    #finally, store the submission comments string into allComments
+    allComments.append(subComments)
+
+print('')
+print('COMPLETE:',len(allComments),'submissions were processed')
+
+#check to see output of first submission from previous code chunk
+print(allComments[0])
+
+#now we can declare the new list allComments as a new column for the df
+df['allComments'] = allComments
+df
+
+df.to_csv('harvest1.csv')
