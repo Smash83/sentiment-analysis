@@ -1,414 +1,395 @@
-{
- "cells": [
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import pandas as pd\n",
-    "import numpy as np\n",
-    "import nltk\n",
-    "import jupyter\n",
-    "import math\n",
-    "import pprint\n",
-    "import praw\n",
-    "from sqlalchemy import create_engine\n",
-    "from sqlalchemy.orm import sessionmaker\n",
-    "from textblob import TextBlob\n",
-    "\n",
-    "#import datetime as dt\n",
-    "import mysql.connector\n",
-    "#from IPython import display (this one is problematic)\n",
-    "\n",
-    "#import seaborn as sns\n",
-    "#sns.set(style='darkgrid', context='talk', palette='Dark2')\n",
-    "\n",
-    "#import sqlalchemy\n",
-    "#import mysqldb\n",
-    "#import MySQLdb\n",
-    "#import pymysql\n",
-    "#import string\n",
-    "\n",
-    "import collections\n",
-    "import matplotlib.pyplot as plt\n",
-    "%matplotlib inline\n",
-    "\n",
-    "mydb = mysql.connector.connect(\n",
-    "  host=\"localhost\",\n",
-    "  user=\"root\",\n",
-    "  passwd=\"sql\"\n",
-    ")\n",
-    "\n",
-    "print(mydb)\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "mycursor=mydb.cursor()\n",
-    "\n",
-    "#create DB (if this is the first time running code, uncomment the next line)\n",
-    "#mycursor.execute(\"CREATE DATABASE redharvest\")\n",
-    "\n",
-    "#check if DB exists\n",
-    "mycursor.execute(\"SHOW DATABASES\")\n",
-    "for x in mycursor:\n",
-    "    print(x)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#connect to db\n",
-    "mydb=mysql.connector.connect(\n",
-    "    host=\"localhost\",\n",
-    "    user=\"root\",\n",
-    "    passwd=\"sql\",\n",
-    "    database=\"redharvest\"\n",
-    ")\n"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#create db table\n",
-    "mycursor=mydb.cursor()\n",
-    "\n",
-    "#sql=\"DROP TABLE submission\"\n",
-    "#mycursor.execute(sql)\n",
-    "mycursor.execute(\"CREATE TABLE IF NOT EXISTS submission (author VARCHAR(50),createtime INT,subid VARCHAR(50),numcomments INT,upvotes INT,downvotes INT, title VARCHAR(300),selftext BLOB,upvoteratio FLOAT,url VARCHAR(100),allComments BLOB, PRIMARY KEY(subid))\")"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#check to see table exists\n",
-    "mycursor=mydb.cursor()\n",
-    "\n",
-    "mycursor.execute(\"SHOW TABLES\")\n",
-    "\n",
-    "for x in mycursor:\n",
-    "    print(x)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#test inserting row\n",
-    "#mycursor=mydb.cursor()\n",
-    "\n",
-    "#sql=\"INSERT INTO submission (author,createtime,subid,numcomments,upvotes,downvotes,title,selftext,upvoteratio,url,comments) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)\"\n",
-    "#val=(\"Ash890\",\"424490033\",\"89898\",\"4\",\"5\",\"0\",\"TestThis\",\"No really test this crap\",\"1.1\",\"www.testit.com\",\"I really hope this works well the first time\")\n",
-    "#mycursor.execute(sql,val)\n",
-    "\n",
-    "#mydb.commit()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#mydb=mysql.connector.connect(\n",
-    "#    host=\"localhost\",\n",
-    "#    user=\"root\",\n",
-    "#    passwd=\"sql\",\n",
-    "#    database=\"redharvest\"\n",
-    "#)\n",
-    "\n",
-    "#get test inserting row\n",
-    "#mycursor=mydb.cursor()\n",
-    "\n",
-    "#print(\"1 record inserted, ID:\",mycursor.lastrowid)\n",
-    "\n",
-    "#sql=\"DELETE FROM submission WHERE subid='89898'\"\n",
-    "#mycursor.execute(sql)\n",
-    "\n",
-    "#mydb.commit()\n",
-    "\n",
-    "#print(mycursor.rowcount,\"record(s) deleted\")"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "reddit=praw.Reddit(client_id='Obe8sGLlN4NcKQ',\n",
-    "                  client_secret='VlXJk0avVaEuqmYdWEjPXFb4wEU',\n",
-    "                  password='vWGVb9sWZZRo6cVk',\n",
-    "                  user_agent='testscript by /u/Smashdawg',\n",
-    "                  username='Smashdawg')"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "subreddit=reddit.subreddit('twitch')\n",
-    "\n",
-    "#top_python=subreddit.top('day')\n",
-    "#top_python=subreddit.top('week')\n",
-    "#top_python=subreddit.new()\n",
-    "#top_python=subreddit.top(limit=None)\n",
-    "top_python=subreddit.hot(limit=None)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#create dataframe\n",
-    "#df_rows=[[submission.author,submission.created_utc,submission.id,submission.num_comments,submission.ups,submission.downs,submission.title,submission.selftext,submission.upvote_ratio,submission.url]for submission in top_python]\n",
-    "#df=pd.DataFrame(df_rows,columns=['author','createtime','subid','numcomments','upvotes','downvotes','title','selftext','upvoteratio','url'])\n",
-    "\n",
-    "#df.head()\n",
-    "\n",
-    "df_rows=[[submission.author,submission.id,submission.num_comments,submission.ups,submission.downs,submission.title,submission.selftext,submission.upvote_ratio,submission.url]for submission in top_python]\n",
-    "df=pd.DataFrame(df_rows,columns=['author','subid','numcomments','upvotes','downvotes','title','selftext','upvoteratio','url'])\n",
-    "\n",
-    "df.head()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "##code that creates a list of strings\n",
-    "#debug statement\n",
-    "print(len(df),'submissions to process')\n",
-    "\n",
-    "#subComments will be a string of all the comments for a particular SUBmission\n",
-    "#create a list to hold a list of subComments for each ID\n",
-    "allComments = []\n",
-    "\n",
-    "#for each row in the df\n",
-    "for i, row in df.iterrows():\n",
-    "    \n",
-    "    #print a period so we know the process is running\n",
-    "    print('.', end='')\n",
-    "    \n",
-    "    #grab ID of that df row\n",
-    "    subID = df.iloc[i]['subid']\n",
-    "    #print('setting submission id to',subID)\n",
-    "    \n",
-    "    #set the submissionID for praw\n",
-    "    submission = reddit.submission(subID)\n",
-    "    submission.comments.replace_more(limit=None)\n",
-    "    \n",
-    "    #init and clear a new subComments string for appending\n",
-    "    subComments = \"\"\n",
-    "    \n",
-    "    #for each comment in submission, append into subComments\n",
-    "    #each comment is separated with a single line break PLUS exactly twenty(20) hyphens\n",
-    "    for comment in submission.comments.list():\n",
-    "        subComments = subComments + comment.body + \"\\n\\n\" + \"------------------------------\" + \"\\n\\n\"\n",
-    "        \n",
-    "    #output number of comments that was pulled\n",
-    "    #print('pulled',len(subComments),'comments for id:',subID)\n",
-    "    \n",
-    "    #finally, store the submission comments string into allComments\n",
-    "    allComments.append(subComments)\n",
-    "\n",
-    "print('')\n",
-    "print('COMPLETE:',len(allComments),'submissions were processed')\n",
-    "\n",
-    "df['allComments'] = allComments\n",
-    "df.head()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#df['author']=df['author'].astype(str).str.replace('/',' ')\n",
-    "#df['author']=df['author'].astype(str)\n",
-    "df=df.astype({\"author\": str,\"subid\": str,\"title\": str,\"selftext\": str,\"url\": str,\"allComments\": str})\n",
-    "\n",
-    "df['allComments']=df['allComments'].str.lower()\n",
-    "df['title']=df['title'].str.lower()\n",
-    "df['selftext']=df['selftext'].str.lower()\n",
-    "\n",
-    "df.head()\n",
-    "\n",
-    "#check df data types \n",
-    "df.dtypes\n",
-    "\n",
-    "#print(type('author'))"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "engine=create_engine(\"mysql+pymysql://root:sql@localhost/redharvest\",pool_size=100, max_overflow=0,pool_recycle=-1)\n",
-    "con=engine.connect()\n",
-    "\n",
-    "#create a configured \"Session\" class\n",
-    "Session=sessionmaker(bind=engine)\n",
-    "\n",
-    "#create a Session\n",
-    "session=Session()\n",
-    "\n",
-    "#engine=create_engine(conn_str,echo=True)\n",
-    "\n",
-    "ta=pd.read_sql('submission',engine)\n",
-    "\n",
-    "#for i in list(df.subid):\n",
-    "#    if i in list(ta.subid):\n",
-    "#        pass\n",
-    "#    else:\n",
-    "#        ta[i]='NULL'\n",
-    "#tconso=ta.append(df)\n",
-    "#df.to_sql('submission',engine,if_exists='append',sort=True\n",
-    "\n",
-    "#subeg=reddit.submission(id='bsylmv')\n",
-    "#print(submission.title)\n",
-    "#pprint.pprint(vars(subeg))\n",
-    "\n",
-    "for i, row in df.iterrows():\n",
-    "    if submission.id in ta.iterrows():\n",
-    "        df.drop([i])\n",
-    "print('COMPLETE')\n",
-    "\n",
-    "mycursor=mydb.cursor()\n",
-    "\n",
-    "#df.to_sql('submission',engine,if_exists='append',index=False)\n",
-    "\n",
-    "#mydb.commit()\n",
-    "#commit()\n",
-    "\n",
-    "session.close()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#df.to_sql('submission',engine)\n",
-    "engine.execute(\"SELECT * FROM submission\").fetchall()"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#calculate polarity and subjectivity for titles in submissions\n",
-    "#dftw[['polarityTitle','subjectivityTitle']]=dftw['Title'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))\n",
-    "df[['polarityTitle','subjectivityTitle']]=df['title'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))\n",
-    "\n",
-    "#calculate polarity and subjectivity for submission body\n",
-    "#dftw[['polaritySub','subjectivitySub']]=dftw['SubText'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))\n",
-    "df[['polaritySelftext','subjectivitySelftext']]=df['selftext'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))\n",
-    "\n",
-    "#calculate polarity and subjectivity for comments in submissions\n",
-    "#dftw[['polarityComm','subjectivityComm']]=dftw['allComments'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))\n",
-    "df[['polarityComm','subjectivityComm']]=df['allComments'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))\n",
-    "\n",
-    "#calculate the average polarity and subjectivity for titles and comments in submissions\n",
-    "#dftw['avePolarity']=dftw['polarityTitle']+dftw['polaritySub']+dftw['polarityComm']/3\n",
-    "#dftw['aveSubjectivity']=dftw['subjectivityTitle']+dftw['subjectivitySub']+dftw['subjectivityComm']/3\n",
-    "\n",
-    "#do weighted score instead? like 0.1 for titles, .04 for sub and 0.5 for comments?\n",
-    "\n",
-    "#print(dftw)\n",
-    "print(df)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "import re\n",
-    "#create list of keywords\n",
-    "keywords =  [ 'load', 'work', 'buffer', 'ingest', 'broken', 'connect', 'lag', 'offline', 'watch', 'buffer', 'blank', \n",
-    "    'black', 'freezing', 'segments', 'website', 'quality', 'rip', 'sync', 'live', '500', 'stutter', 'down', 'play', \n",
-    "    'rtmp' ]\n",
-    "keywords_re = re.compile(\"|\".join(keywords))"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": [
-    "#count number of instances \n",
-    "df['KeywordScoreTitle']=df['title'].str.count(keywords_re)\n",
-    "df['KeywordScoreSubBod']=df['selftext'].str.count(keywords_re)\n",
-    "df['KeywordScoreComm']=df['allComments'].str.count(keywords_re)\n",
-    "df['KeywordScore']=df['KeywordScoreTitle']+df['KeywordScoreSubBod']+df['KeywordScoreComm']\n",
-    "print(df)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
-   "outputs": [],
-   "source": []
-  }
- ],
- "metadata": {
-  "kernelspec": {
-   "display_name": "Python 3",
-   "language": "python",
-   "name": "python3"
-  },
-  "language_info": {
-   "codemirror_mode": {
-    "name": "ipython",
-    "version": 3
-   },
-   "file_extension": ".py",
-   "mimetype": "text/x-python",
-   "name": "python",
-   "nbconvert_exporter": "python",
-   "pygments_lexer": "ipython3",
-   "version": "3.7.3"
-  }
- },
- "nbformat": 4,
- "nbformat_minor": 2
-}
+import pandas as pd
+import numpy as np
+import nltk
+import jupyter
+import math
+import pprint
+import praw
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from textblob import TextBlob
+import emoji
+
+#import datetime as dt
+import mysql.connector
+#from IPython import display (this one is problematic)
+
+#import seaborn as sns
+#sns.set(style='darkgrid', context='talk', palette='Dark2')
+
+#import sqlalchemy
+#import mysqldb
+#import MySQLdb
+#import pymysql
+#import string
+
+import collections
+import matplotlib.pyplot as plt
+%matplotlib inline
+
+mydb = mysql.connector.connect(
+  host="localhost",
+  user="root",
+  passwd="sql"
+)
+
+print(mydb)
+
+#cnx=mysql.connector.connect()
+
+cursor=mydb.cursor(buffered=True)
+#mydb2=mysql.connector.connect(buffered=True)
+
+mycursor=mydb.cursor()
+
+#create DB (if this is the first time running code, uncomment the next line)
+#mycursor.execute("CREATE DATABASE redharvest")
+
+#check if DB exists
+mycursor.execute("SHOW DATABASES")
+for x in mycursor:
+    print(x)
+	
+#connect to db
+mydb=mysql.connector.connect(
+    host="localhost",
+    user="root",
+    passwd="sql",
+    database="redharvest"
+)
+
+#create db table
+mycursor=mydb.cursor()
+
+#sql="DROP TABLE submission"
+#mycursor.execute(sql)
+#mycursor.execute("CREATE TABLE IF NOT EXISTS submission (author VARCHAR(50),createtime INT,subid VARCHAR(50),numcomments INT,upvotes INT,downvotes INT, title VARCHAR(300),selftext BLOB,upvoteratio FLOAT,url VARCHAR(100),allComments BLOB, PRIMARY KEY(subid))")
+
+#check to see table exists
+mycursor=mydb.cursor()
+
+mycursor.execute("SHOW TABLES")
+
+for x in mycursor:
+    print(x)
+	
+#test inserting row
+#mycursor=mydb.cursor()
+
+#sql="INSERT INTO submission (author,createtime,subid,numcomments,upvotes,downvotes,title,selftext,upvoteratio,url,comments) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+#val=("Ash890","424490033","89898","4","5","0","TestThis","No really test this crap","1.1","www.testit.com","I really hope this works well the first time")
+#mycursor.execute(sql,val)
+
+#mydb.commit()
+
+reddit=praw.Reddit(client_id='Obe8sGLlN4NcKQ',
+                  client_secret='VlXJk0avVaEuqmYdWEjPXFb4wEU',
+                  password='vWGVb9sWZZRo6cVk',
+                  user_agent='testscript by /u/Smashdawg',
+                  username='Smashdawg')
+				  
+subreddit=reddit.subreddit('twitch')
+
+#top_python=subreddit.top('day')
+#top_python=subreddit.top('week')
+#top_python=subreddit.new()
+#top_python=subreddit.top(limit=None)
+#top_python=subreddit.hot(limit=None)
+#top_python=subreddit.new(limit=None)
+top_python=subreddit.top('hour')
+
+#create dataframe
+#df_rows=[[submission.author,submission.created_utc,submission.id,submission.num_comments,submission.ups,submission.downs,submission.title,submission.selftext,submission.upvote_ratio,submission.url]for submission in top_python]
+#df=pd.DataFrame(df_rows,columns=['author','createtime','subid','numcomments','upvotes','downvotes','title','selftext','upvoteratio','url'])
+
+#df.head()
+
+df_rows=[[submission.author,submission.id,submission.num_comments,submission.ups,submission.downs,submission.title,submission.selftext,submission.upvote_ratio,submission.url]for submission in top_python]
+df=pd.DataFrame(df_rows,columns=['author','subid','numcomments','upvotes','downvotes','title','selftext','upvoteratio','url'])
+
+print(len(df),'submissions')
+df.head()
+
+##code that creates a list of strings
+#debug statement
+print(len(df),'submissions to process')
+
+#subComments will be a string of all the comments for a particular SUBmission
+#create a list to hold a list of subComments for each ID
+allComments = []
+
+#for each row in the df
+for i, row in df.iterrows():
+    
+    #print a period so we know the process is running
+    print('.', end='')
+    
+    #grab ID of that df row
+    subID = df.iloc[i]['subid']
+    #print('setting submission id to',subID)
+    
+    #set the submissionID for praw
+    submission = reddit.submission(subID)
+    submission.comments.replace_more(limit=None)
+    
+    #init and clear a new subComments string for appending
+    subComments = ""
+    
+    #for each comment in submission, append into subComments
+    #each comment is separated with a single line break PLUS exactly twenty(20) hyphens
+    for comment in submission.comments.list():
+        subComments = subComments + comment.body + "\n\n" + "------------------------------" + "\n\n"
+        
+    #output number of comments that was pulled
+    #print('pulled',len(subComments),'comments for id:',subID)
+    
+    #finally, store the submission comments string into allComments
+    allComments.append(subComments)
+
+print('')
+print('COMPLETE:',len(allComments),'submissions were processed')
+
+df['allComments'] = allComments
+df.head()
+
+#fix classes of df variables
+df=df.astype({"author": str,"subid": str,"title": str,"selftext": str,"url": str,"allComments": str})
+
+#make text fields in df lowercase
+df['allComments']=df['allComments'].str.lower()
+df['title']=df['title'].str.lower()
+df['selftext']=df['selftext'].str.lower()
+
+df.head()
+
+test="😃 at this"
+testchar=[str for str in test]
+emojitest=[c for c in testchar if c in emoji.UNICODE_EMOJI]
+test=emoji.demojize(test)
+print(test)
+
+#remove emojis from text
+#for i, row in df.iterrows():
+#    df['allComments']=emoji.demojize('allComments')
+#    df['title']=emoji.demojize('title')
+#    df['selftext']=emoji.demojize('selftext')
+
+#df=df[~df.subid.isin(ta.subid)]
+df.iterrows('allComments')
+
+df.head()
+
+#check df data types 
+df.dtypes
+
+#print(type('author'))
+
+engine=create_engine("mysql+pymysql://root:sql@localhost/redharvest",pool_size=100, max_overflow=0,pool_recycle=-1)
+con=engine.connect()
+
+#create a configured "Session" class
+Session=sessionmaker(bind=engine)
+
+#create a Session
+session=Session()
+
+#engine=create_engine(conn_str,echo=True)
+
+ta=pd.read_sql('submission',engine)
+
+#for i in list(df.subid):
+#    if i in list(ta.subid):
+#        pass
+#    else:
+#        ta[i]='NULL'
+#tconso=ta.append(df)
+#df.to_sql('submission',engine,if_exists='append',sort=True
+
+#subeg=reddit.submission(id='bsylmv')
+#print(submission.title)
+#pprint.pprint(vars(subeg))
+
+#for i, row in df.iterrows():
+#    if df.subid in ta:
+#        print('TRUE')
+#        #df.drop([i])
+#    else:
+#        print('FALSE')
+#print('COMPLETE')
+#for i, row in df.iterrows():
+#    print('a')
+#    for j, row in ta.iterrows():
+#        print('b')
+
+#for i, row in df.iterrows():
+#    print(row['subid'])
+#print('=================') 
+#for i, row in ta.iterrows():
+#    print(row['subid'])
+#print('=================')
+#for i, row in df.iterrows():
+#    print(df.subid.isin(ta.subid).bool)
+#    if(df.subid.isin(ta.subid).bool):
+#        print('true')
+#        #print(row['subid'])
+#        #df.drop(i,inplace=True)
+#print('=================') 
+#df.head()
+
+df=df[~df.subid.isin(ta.subid)]
+
+#for i, row in df.iterrows():
+#    dfid=df.subid
+#    print(dfid)
+#    for j, row in ta.iterrows():
+#        taid=ta.subid
+#        print(taid)
+#        if dfid==taid:
+#            print('TRUE')
+#        else:
+#            print('FALSE')
+#print('COMPLETE')
+
+
+mycursor=mydb.cursor()
+
+#insert data into table 'submission'
+df.to_sql('submission',engine,if_exists='append',index=False)
+
+#mydb.commit()
+#commit()
+
+session.close()
+
+#df.to_sql('submission',engine)
+engine.execute("SELECT * FROM submission").fetchall()
+
+
+#count the number of rows in the 'submission' table
+table_count=engine.execute("SELECT COUNT(*) FROM submission").fetchall()
+table_count
+
+sqlquerydf2=engine.execute("SELECT subid,title,selftext,allComments FROM submission").fetchall()
+sqlquerydf2
+
+df2=pd.DataFrame(sqlquerydf2,columns=['subid','title','selftext','allComments'])
+#df_rows2=[[subid,title,selftext,allComments]for submission in sqlquerydf2]
+#df2=pd.DataFrame(df_rows2,columns=['subid','title','selftext','allComments'])
+
+print(len(df2),'submissions')
+df2.head()
+
+#df2.dtypes
+
+#fix classes of df2 variables
+df2=df2.astype({"subid": str,"title": str,"selftext": str,"allComments": str})
+
+#calculate polarity and subjectivity for titles in submissions
+#dftw[['polarityTitle','subjectivityTitle']]=dftw['Title'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))
+df2[['polarityTitle','subjectivityTitle']]=df2['title'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))
+
+#calculate polarity and subjectivity for submission body
+#dftw[['polaritySub','subjectivitySub']]=dftw['SubText'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))
+df2[['polaritySelftext','subjectivitySelftext']]=df2['selftext'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))
+
+#calculate polarity and subjectivity for comments in submissions
+#dftw[['polarityComm','subjectivityComm']]=dftw['allComments'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))
+df2[['polarityComm','subjectivityComm']]=df2['allComments'].apply(lambda Text: pd.Series(TextBlob(Text).sentiment))
+
+#calculate the average polarity and subjectivity for titles and comments in submissions
+#dftw['avePolarity']=dftw['polarityTitle']+dftw['polaritySub']+dftw['polarityComm']/3
+#dftw['aveSubjectivity']=dftw['subjectivityTitle']+dftw['subjectivitySub']+dftw['subjectivityComm']/3
+
+#do weighted score instead? like 0.1 for titles, .04 for sub and 0.5 for comments?
+
+#print(dftw)
+print(df2)
+
+import re
+#create list of keywords
+keywords =  [ 'load', 'work', 'buffer', 'ingest', 'broken', 'connect', 'lag', 'offline', 'watch', 'buffer', 'blank', 
+    'black', 'freezing', 'segments', 'website', 'quality', 'rip', 'sync', 'live', '500', 'stutter', 'down', 'play', 
+    'rtmp' ]
+keywords_re = re.compile("|".join(keywords))
+
+#count number of instances 
+df2['KeywordScoreTitle']=df2['title'].str.count(keywords_re)
+df2['KeywordScoreSubBod']=df2['selftext'].str.count(keywords_re)
+df2['KeywordScoreComm']=df2['allComments'].str.count(keywords_re)
+df2['KeywordScore']=df2['KeywordScoreTitle']+df2['KeywordScoreSubBod']+df2['KeywordScoreComm']
+print(df2)
+
+#check head of df2
+df2.head()
+
+#after scoring complete, drop text columns to store df into db table
+df2=df2.drop(['title','selftext','allComments'],axis=1)
+
+#make sure columns are dropped
+df2.head()
+
+#create db table
+mycursor=mydb.cursor()
+
+#sql2="DROP TABLE score"
+#mycursor.execute(sql2)
+mycursor.execute("CREATE TABLE IF NOT EXISTS score (subid VARCHAR(50),polarityTitle FLOAT,subjectivityTitle FLOAT,polaritySelftext FLOAT,subjectivitySelftext FLOAT,polarityComm FLOAT,subjectivityComm FLOAT,KeywordScoreTitle FLOAT,KeywordScoreSubBod FLOAT,KeywordScoreComm FLOAT,KeywordScore FLOAT,PRIMARY KEY(subid), FOREIGN KEY(subid) REFERENCES submission(subid))")
+
+#check to see table exists
+mycursor=mydb.cursor()
+
+mycursor.execute("SHOW TABLES")
+
+for x in mycursor:
+    print(x)
+	
+engine=create_engine("mysql+pymysql://root:sql@localhost/redharvest",pool_size=100, max_overflow=0,pool_recycle=-1)
+con=engine.connect()
+
+#create a configured "Session" class
+Session=sessionmaker(bind=engine)
+
+#create a Session
+session=Session()
+
+#engine=create_engine(conn_str,echo=True)
+
+ta2=pd.read_sql('score',engine)
+
+#for i in list(df.subid):
+#    if i in list(ta.subid):
+#        pass
+#    else:
+#        ta[i]='NULL'
+#tconso=ta.append(df)
+#df.to_sql('submission',engine,if_exists='append',sort=True
+
+#subeg=reddit.submission(id='bsylmv')
+#print(submission.title)
+#pprint.pprint(vars(subeg))
+
+#for i, row in df2.iterrows():
+#    if 'subid' in ta2.iterrows():
+#        #df2.drop([i])
+#        print('TRUE')
+#    else:
+#        print('FALSE')
+df2=df2[~df2.subid.isin(ta2.subid)]
+print('COMPLETE')
+
+mycursor=mydb.cursor()
+
+#insert data into table 'submission'
+df2.to_sql('score',engine,if_exists='append',index=False)
+
+mydb.commit()
+#commit()
+
+session.close()
+
+#df.to_sql('scores',engine)
+engine.execute("SELECT * FROM score").fetchall()
+
+#count the number of rows in the 'submission' table
+table_count=engine.execute("SELECT COUNT(*) FROM score").fetchall()
+table_count
